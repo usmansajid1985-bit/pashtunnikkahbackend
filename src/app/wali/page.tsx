@@ -18,7 +18,7 @@ export default async function WaliOversightPage() {
       users: {
         select: {
           email: true,
-          profiles: { select: { profile_code: true }, take: 1 },
+          profiles: { select: { profile_code: true } },
         },
       },
     },
@@ -55,7 +55,7 @@ export default async function WaliOversightPage() {
             links.map((l) => (
               <div key={l.id.toString()} className="flex justify-between gap-3 text-sm border-b pb-2">
                 <span>
-                  {l.users.profiles?.[0]?.profile_code || l.users.email} · {l.name || "Wali"}
+                  {l.users.profiles?.profile_code || l.users.email} · {l.name || "Wali"}
                 </span>
                 <span className="text-muted-foreground">{fmtDate(l.created_at)}</span>
               </div>
