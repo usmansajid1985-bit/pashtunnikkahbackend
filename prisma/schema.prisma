@@ -1,0 +1,570 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admin_notes {
+  id                                BigInt   @id
+  user_id                           BigInt
+  admin_id                          BigInt
+  note_text                         String
+  created_at                        DateTime @db.Timestamptz(6)
+  users_admin_notes_admin_idTousers users    @relation("admin_notes_admin_idTousers", fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_admin_notes_user_idTousers  users    @relation("admin_notes_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model announcements {
+  id             BigInt    @id
+  title          String    @default("") @db.VarChar(255)
+  body           String    @default("")
+  image_id       BigInt?
+  cta_label      String    @default("") @db.VarChar(100)
+  cta_url        String    @default("") @db.VarChar(500)
+  type           String    @default("announcement") @db.VarChar(32)
+  roadmap_status String    @default("planned") @db.VarChar(32)
+  status         String    @default("draft") @db.VarChar(32)
+  publish_at     DateTime? @db.Timestamptz(6)
+  notified       Boolean   @default(false)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model hero_slides {
+  id         BigInt   @id
+  image_url  String   @db.VarChar(500)
+  alt        String   @default("") @db.VarChar(255)
+  slot       String   @default("hero") @db.VarChar(32)
+  sort_order Int      @default(0)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model blocks {
+  id                             BigInt   @id
+  blocker_id                     BigInt
+  blocked_id                     BigInt
+  created_at                     DateTime @default(now()) @db.Timestamptz(6)
+  users_blocks_blocked_idTousers users    @relation("blocks_blocked_idTousers", fields: [blocked_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_blocks_blocker_idTousers users    @relation("blocks_blocker_idTousers", fields: [blocker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([blocker_id, blocked_id])
+}
+
+model email_verifications {
+  id         BigInt   @id
+  email      String   @unique @db.VarChar(255)
+  token      String   @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  expires_at DateTime @db.Timestamptz(6)
+  used       Boolean  @default(false)
+}
+
+model favourites {
+  id                                      BigInt   @id
+  user_id                                 BigInt
+  profile_user_id                         BigInt
+  created_at                              DateTime @default(now()) @db.Timestamptz(6)
+  note                                    String?  @db.VarChar(500)
+  users_favourites_profile_user_idTousers users    @relation("favourites_profile_user_idTousers", fields: [profile_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_favourites_user_idTousers         users    @relation("favourites_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, profile_user_id])
+}
+
+model flagged_messages {
+  id                                        BigInt   @id
+  message_id                                BigInt
+  request_id                                BigInt
+  sender_id                                 BigInt
+  receiver_id                               BigInt
+  original_text                             String
+  filtered_text                             String
+  reason                                    String   @default("") @db.VarChar(50)
+  flagged_at                                DateTime @default(now()) @db.Timestamptz(6)
+  reviewed                                  Boolean  @default(false)
+  users_flagged_messages_receiver_idTousers users    @relation("flagged_messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_flagged_messages_sender_idTousers   users    @relation("flagged_messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model chat_warnings {
+  id              BigInt   @id
+  user_id         BigInt
+  request_id      BigInt?
+  words           String
+  reason          String   @default("") @db.VarChar(80)
+  warning_number  Int
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model chat_leak_watch {
+  user_id    BigInt
+  request_id BigInt
+  buffer     String
+  remaining  Int      @default(0)
+  use_ai     Boolean  @default(true)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([user_id, request_id])
+}
+
+model match_requests {
+  id                                      BigInt     @id
+  sender_id                               BigInt
+  receiver_id                             BigInt
+  status                                  String     @default("pending") @db.VarChar(32)
+  expires_at                              DateTime   @db.Timestamptz(6)
+  created_at                              DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at                              DateTime   @default(now()) @db.Timestamptz(6)
+  communication_mode                      String?    @db.VarChar(32)
+  photo_shared                            Boolean    @default(false)
+  photo_shared_at                         DateTime?  @db.Timestamptz(6)
+  photo_once_shared_at                    DateTime?  @db.Timestamptz(6)
+  photo_once_viewed_at                    DateTime?  @db.Timestamptz(6)
+  wali_handover_status                    String?    @db.VarChar(32)
+  wali_details_requested_at               DateTime?  @db.Timestamptz(6)
+  wali_details_shared_at                  DateTime?  @db.Timestamptz(6)
+  wali_contact_attempted_at               DateTime?  @db.Timestamptz(6)
+  wali_contact_confirmed_at               DateTime?  @db.Timestamptz(6)
+  wali_handover_note                      String?
+  ended_at                                DateTime?  @db.Timestamptz(6)
+  ended_by                                BigInt?
+  end_reason                              String?    @db.VarChar(32)
+  users_match_requests_receiver_idTousers users      @relation("match_requests_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_match_requests_sender_idTousers   users      @relation("match_requests_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  messages                                messages[]
+  chat_access_log                         chat_access_log[]
+
+  @@index([receiver_id, status], map: "idx_match_requests_receiver")
+  @@index([sender_id, status], map: "idx_match_requests_sender")
+}
+
+model browse_impressions {
+  viewer_id     BigInt
+  shown_user_id BigInt
+  times_shown   Int       @default(1)
+  last_shown_at DateTime  @default(now()) @db.Timestamptz(6)
+  opened_at     DateTime? @db.Timestamptz(6)
+  skipped_at    DateTime? @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@id([viewer_id, shown_user_id])
+  @@index([viewer_id, last_shown_at(sort: Desc)], map: "idx_browse_impressions_viewer_shown")
+}
+
+model messages {
+  id                                BigInt              @id
+  request_id                        BigInt
+  sender_id                         BigInt
+  receiver_id                       BigInt
+  body                              String
+  is_read                           Boolean             @default(false)
+  is_flagged                        Boolean             @default(false)
+  flagged_by                        BigInt?
+  created_at                        DateTime            @default(now()) @db.Timestamptz(6)
+  reply_to_id                       BigInt?
+  message_type                      String              @default("text") @db.VarChar(20)
+  metadata                          Json?
+  message_reactions                 message_reactions[]
+  users_messages_flagged_byTousers  users?              @relation("messages_flagged_byTousers", fields: [flagged_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_messages_receiver_idTousers users               @relation("messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  match_requests                    match_requests      @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_messages_sender_idTousers   users               @relation("messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([receiver_id, is_read], map: "idx_messages_receiver_unread")
+  @@index([request_id, created_at], map: "idx_messages_request")
+}
+
+model moderation_log {
+  id                                   BigInt    @id
+  legacy_post_id                       BigInt?
+  user_id                              BigInt?
+  action                               String    @default("") @db.VarChar(100)
+  note                                 String?
+  created_at                           DateTime? @default(now()) @db.Timestamptz(6)
+  admin_id                             BigInt?
+  users_moderation_log_admin_idTousers users?    @relation("moderation_log_admin_idTousers", fields: [admin_id], references: [id], onUpdate: NoAction)
+  users_moderation_log_user_idTousers  users?    @relation("moderation_log_user_idTousers", fields: [user_id], references: [id], onUpdate: NoAction)
+}
+
+model admin_security {
+  id              BigInt    @id @default(autoincrement())
+  user_id         BigInt    @unique
+  totp_secret     String?   @db.VarChar(64)
+  totp_enabled    Boolean   @default(false)
+  failed_attempts Int       @default(0)
+  locked_until    DateTime? @db.Timestamptz(6)
+  last_login_at   DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model payments {
+  id                BigInt   @id
+  user_id           BigInt
+  stripe_session_id String   @unique @db.VarChar(255)
+  type              String   @db.VarChar(32)
+  plan_or_pack      String   @db.VarChar(50)
+  amount_pence      Int      @default(0)
+  status            String   @default("pending") @db.VarChar(32)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  users             users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status], map: "idx_payments_status")
+  @@index([user_id], map: "idx_payments_user")
+}
+
+model profile_guardians {
+  id           BigInt   @id @default(autoincrement())
+  profile_id   BigInt   @unique
+  user_id      BigInt
+  name         String?  @db.VarChar(255)
+  contact      String?  @db.VarChar(128)
+  contact_code String?  @db.VarChar(16)
+  email        String?  @db.VarChar(255)
+  notes        String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  profiles     profiles @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model profile_views {
+  id                                   BigInt   @id
+  viewer_id                            BigInt
+  viewed_id                            BigInt
+  viewed_at                            DateTime @default(now()) @db.Timestamptz(6)
+  users_profile_views_viewed_idTousers users    @relation("profile_views_viewed_idTousers", fields: [viewed_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_profile_views_viewer_idTousers users    @relation("profile_views_viewer_idTousers", fields: [viewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([viewed_id, viewed_at(sort: Desc)], map: "idx_profile_views_viewed")
+}
+
+model profiles {
+  id                     BigInt             @id @default(autoincrement())
+  user_id                BigInt             @unique
+  legacy_post_id         BigInt?
+  profile_code           String?            @db.VarChar(32)
+  status                 String             @default("pending") @db.VarChar(32)
+  rejection_reason       String?
+  is_hidden              Boolean            @default(false)
+  is_partial             Boolean            @default(false)
+  warn_count             Int                @default(0)
+  submitted_at           DateTime?          @db.Timestamptz(6)
+  full_name              String?            @db.VarChar(255)
+  gender                 String?            @db.VarChar(32)
+  email                  String?            @db.VarChar(255)
+  dob                    DateTime?          @db.Date
+  age                    Int?
+  height                 String?            @db.VarChar(64)
+  weight                 String?            @db.VarChar(64)
+  build                  String?            @db.VarChar(64)
+  complexion             String?            @db.VarChar(64)
+  appearance             String?            @db.VarChar(128)
+  marital_status         String?            @db.VarChar(64)
+  has_children           String?            @db.VarChar(64)
+  children               String?            @db.VarChar(128)
+  wants_children         String?            @db.VarChar(64)
+  living_arrangements    String?            @db.VarChar(255)
+  disabilities           String?
+  phone                  String?            @db.VarChar(64)
+  phone_country_code     String?            @db.VarChar(16)
+  country                String?            @db.VarChar(128)
+  city                   String?            @db.VarChar(128)
+  current_location       String?            @db.VarChar(255)
+  ancestral_village      String?            @db.VarChar(255)
+  family_origin          String?            @db.VarChar(255)
+  ethnicity              String?            @db.VarChar(128)
+  tribe                  String?            @db.VarChar(128)
+  sub_tribe              String?            @db.VarChar(128)
+  khiel                  String?            @db.VarChar(128)
+  legal_status           String?            @db.VarChar(64)
+  willing_to_relocate    String?            @db.VarChar(64)
+  relocate               String?            @db.VarChar(64)
+  pashto_speaker         String?            @db.VarChar(64)
+  pashto_level           String?            @db.VarChar(64)
+  home_language          String?            @db.VarChar(128)
+  dialect                String?            @db.VarChar(128)
+  father_name            String?            @db.VarChar(255)
+  father_occupation      String?            @db.VarChar(255)
+  brothers               Int?
+  sisters                Int?
+  education              String?            @db.VarChar(128)
+  field_of_study         String?            @db.VarChar(255)
+  occupation             String?            @db.VarChar(255)
+  religious_practice     String?            @db.VarChar(128)
+  religious_methodology  String?            @db.VarChar(128)
+  islamic_practice       String?
+  practicing_since       String?
+  salah_pattern          String?
+  born_muslim            String?            @db.VarChar(64)
+  about_me               String?
+  partner_preferences    String?
+  open_to                String?
+  age_pref_from          Int?
+  age_pref_to            Int?
+  height_preference      String?            @db.VarChar(128)
+  education_pref         String?            @db.VarChar(255)
+  appearance_pref        String?            @db.VarChar(255)
+  accept_widow           String?            @db.VarChar(16)
+  consider_divorcee      String?            @db.VarChar(16)
+  consider_disabilities  String?            @db.VarChar(16)
+  photo_status           String?            @db.VarChar(32)
+  photo_version          Int?
+  interests              String?
+  traits                 String?
+  created_at             DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime           @default(now()) @db.Timestamptz(6)
+  photo_url              String?            @db.VarChar(500)
+  photo_verification_url String?            @db.VarChar(500)
+  profile_guardians      profile_guardians?
+  users                  users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  wali_links             wali_links[]
+
+  @@index([age], map: "idx_profiles_age")
+  @@index([profile_code], map: "idx_profiles_code")
+  @@index([country, city], map: "idx_profiles_country_city")
+  @@index([gender], map: "idx_profiles_gender")
+  @@index([marital_status], map: "idx_profiles_marital")
+  @@index([status], map: "idx_profiles_status")
+  @@index([tribe], map: "idx_profiles_tribe")
+}
+
+model plan_settings {
+  id                    BigInt   @id @default(autoincrement())
+  plan                  String   @unique @db.VarChar(32)
+  monthly_credits       Int
+  rollover_cap          Int      @default(0)
+  max_balance           Int
+  pending_request_limit Int
+  request_expiry_days   Int      @default(7)
+  saved_profile_limit   Int?
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model credit_ledger {
+  id                 BigInt   @id @default(autoincrement())
+  user_id            BigInt
+  amount             Int
+  balance_type       String   @db.VarChar(32)
+  reason             String   @db.VarChar(64)
+  related_request_id BigInt?
+  related_payment_id BigInt?
+  admin_id           BigInt?
+  previous_balance   Int
+  new_balance        Int
+  idempotency_key    String?  @unique @db.VarChar(128)
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  users              users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, created_at], map: "idx_credit_ledger_user")
+}
+
+model push_subscriptions {
+  id         BigInt    @id
+  user_id    BigInt?
+  endpoint   String    @unique
+  p256dh_key String    @default("")
+  auth_key   String    @default("")
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  platform   String?   @db.VarChar(32)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  user_agent String?   @db.VarChar(255)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model referrals {
+  id                                 BigInt   @id
+  referrer_id                        BigInt
+  referee_id                         BigInt
+  status                             String   @default("pending") @db.VarChar(32)
+  created_at                         DateTime @default(now()) @db.Timestamptz(6)
+  users_referrals_referee_idTousers  users    @relation("referrals_referee_idTousers", fields: [referee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_referrals_referrer_idTousers users    @relation("referrals_referrer_idTousers", fields: [referrer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([referrer_id, referee_id])
+}
+
+model reports {
+  id                               BigInt   @id
+  reporter_id                      BigInt
+  reported_id                      BigInt
+  reason                           String
+  status                           String   @default("open") @db.VarChar(32)
+  created_at                       DateTime @default(now()) @db.Timestamptz(6)
+  users_reports_reported_idTousers users    @relation("reports_reported_idTousers", fields: [reported_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_reports_reporter_idTousers users    @relation("reports_reporter_idTousers", fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model subscriptions {
+  id                         BigInt    @id
+  user_id                    BigInt
+  stripe_subscription_id     String    @default("") @db.VarChar(255)
+  stripe_payment_intent_id   String    @default("") @db.VarChar(255)
+  plan                       String    @default("gold") @db.VarChar(50)
+  amount_pence               Int       @default(0)
+  subscription_started_at    DateTime  @db.Timestamptz(6)
+  refund_eligible            Boolean   @default(true)
+  refund_eligibility_lost_at DateTime? @db.Timestamptz(6)
+  refund_ineligible_reason   String?   @db.VarChar(255)
+  refund_requested_at        DateTime? @db.Timestamptz(6)
+  refund_status              String?   @db.VarChar(30)
+  refund_processed_at        DateTime? @db.Timestamptz(6)
+  created_at                 DateTime  @db.Timestamptz(6)
+  users                      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_subscriptions_user")
+}
+
+model user_events {
+  id         BigInt   @id
+  user_id    BigInt
+  type       String   @db.VarChar(40)
+  payload    Json?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, id], map: "idx_user_events_user")
+}
+
+model users {
+  id                                                   BigInt                    @id
+  email                                                String                    @unique @db.VarChar(255)
+  password_hash                                        String                    @default("") @db.VarChar(255)
+  display_name                                         String                    @default("") @db.VarChar(255)
+  role                                                 String                    @default("user") @db.VarChar(32)
+  account_status                                       String                    @default("active") @db.VarChar(32)
+  email_verified                                       Boolean                   @default(false)
+  sms_verified                                         Boolean                   @default(false)
+  cultural_verified                                    Boolean                   @default(false)
+  onboarding_complete                                  Boolean                   @default(false)
+  founding_member                                      Boolean                   @default(false)
+  legacy_member                                        Boolean                   @default(false)
+  trust_level                                          Int                       @default(0)
+  referral_code                                        String?                   @db.VarChar(64)
+  stripe_customer_id                                   String?                   @db.VarChar(255)
+  plan                                                 String?                   @db.VarChar(50)
+  subscription_status                                  String?                   @db.VarChar(50)
+  stripe_subscription_id                               String?                   @db.VarChar(255)
+  requests_remaining                                   Int                       @default(0)
+  nudges_remaining                                     Int                       @default(0)
+  free_starter_credits                                 Int                       @default(0)
+  free_starter_awarded                                 Boolean                   @default(false)
+  female_mode                                          Boolean                   @default(false)
+  last_seen_at                                         DateTime?                 @db.Timestamptz(6)
+  approved_at                                          DateTime?                 @db.Timestamptz(6)
+  deletion_requested_at                                DateTime?                 @db.Timestamptz(6)
+  deletion_reason                                      String?
+  registered_at                                        DateTime                  @default(now()) @db.Timestamptz(6)
+  created_at                                           DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                           DateTime                  @default(now()) @db.Timestamptz(6)
+  admin_notes_admin_notes_admin_idTousers              admin_notes[]             @relation("admin_notes_admin_idTousers")
+  admin_notes_admin_notes_user_idTousers               admin_notes[]             @relation("admin_notes_user_idTousers")
+  admin_security                                       admin_security?
+  blocks_blocks_blocked_idTousers                      blocks[]                  @relation("blocks_blocked_idTousers")
+  blocks_blocks_blocker_idTousers                      blocks[]                  @relation("blocks_blocker_idTousers")
+  credit_ledger                                        credit_ledger[]
+  favourites_favourites_profile_user_idTousers         favourites[]              @relation("favourites_profile_user_idTousers")
+  favourites_favourites_user_idTousers                 favourites[]              @relation("favourites_user_idTousers")
+  flagged_messages_flagged_messages_receiver_idTousers flagged_messages[]        @relation("flagged_messages_receiver_idTousers")
+  flagged_messages_flagged_messages_sender_idTousers   flagged_messages[]        @relation("flagged_messages_sender_idTousers")
+  match_requests_match_requests_receiver_idTousers     match_requests[]          @relation("match_requests_receiver_idTousers")
+  match_requests_match_requests_sender_idTousers       match_requests[]          @relation("match_requests_sender_idTousers")
+  message_reactions                                    message_reactions[]
+  messages_messages_flagged_byTousers                  messages[]                @relation("messages_flagged_byTousers")
+  messages_messages_receiver_idTousers                 messages[]                @relation("messages_receiver_idTousers")
+  messages_messages_sender_idTousers                   messages[]                @relation("messages_sender_idTousers")
+  moderation_log_moderation_log_admin_idTousers        moderation_log[]          @relation("moderation_log_admin_idTousers")
+  moderation_log_moderation_log_user_idTousers         moderation_log[]          @relation("moderation_log_user_idTousers")
+  notification_preferences                             notification_preferences?
+  notifications                                        notifications[]
+  payments                                             payments[]
+  profile_guardians                                    profile_guardians[]
+  profile_views_profile_views_viewed_idTousers         profile_views[]           @relation("profile_views_viewed_idTousers")
+  profile_views_profile_views_viewer_idTousers         profile_views[]           @relation("profile_views_viewer_idTousers")
+  profiles                                             profiles?
+  push_subscriptions                                   push_subscriptions[]
+  referrals_referrals_referee_idTousers                referrals[]               @relation("referrals_referee_idTousers")
+  referrals_referrals_referrer_idTousers               referrals[]               @relation("referrals_referrer_idTousers")
+  reports_reports_reported_idTousers                   reports[]                 @relation("reports_reported_idTousers")
+  reports_reports_reporter_idTousers                   reports[]                 @relation("reports_reporter_idTousers")
+  subscriptions                                        subscriptions[]
+  user_events                                          user_events[]
+  wali_links                                           wali_links[]
+  chat_access_log_chat_access_log_admin_idTousers      chat_access_log[]         @relation("chat_access_log_admin_idTousers")
+
+  @@index([last_seen_at(sort: Desc)], map: "idx_users_last_seen")
+  @@index([plan], map: "idx_users_plan")
+  @@index([role], map: "idx_users_role")
+}
+
+model wali_links {
+  id               BigInt    @id @default(autoincrement())
+  profile_id       BigInt
+  user_id          BigInt
+  name             String    @db.VarChar(255)
+  relation         String?   @db.VarChar(64)
+  token            String    @unique @db.VarChar(64)
+  revoked_at       DateTime? @db.Timestamptz(6)
+  last_accessed_at DateTime? @db.Timestamptz(6)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  profiles         profiles  @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users            users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_wali_links_user")
+}
+
+model notification_preferences {
+  id           BigInt   @id @default(autoincrement())
+  user_id      BigInt   @unique
+  push_enabled Boolean  @default(true)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notifications {
+  id                 BigInt    @id @default(autoincrement())
+  recipient_user_id  BigInt
+  type               String    @db.VarChar(32)
+  title              String    @db.VarChar(255)
+  body               String
+  url                String?   @db.VarChar(500)
+  tag                String?   @db.VarChar(128)
+  related_request_id BigInt?
+  metadata           Json?
+  read_at            DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  users              users     @relation(fields: [recipient_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([recipient_user_id, created_at], map: "idx_notifications_recipient")
+}
+
+model message_reactions {
+  id         BigInt   @id @default(autoincrement())
+  message_id BigInt
+  user_id    BigInt
+  emoji      String   @db.VarChar(16)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  messages   messages @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([message_id, user_id])
+  @@index([message_id], map: "idx_message_reactions_message")
+}
+
+model chat_access_log {
+  id             BigInt         @id @default(autoincrement())
+  admin_id       BigInt
+  request_id     BigInt
+  opened_at      DateTime       @default(now()) @db.Timestamptz(6)
+  users          users          @relation("chat_access_log_admin_idTousers", fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  match_requests match_requests @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([request_id, opened_at(sort: Desc)], map: "idx_chat_access_log_request")
+  @@index([admin_id, opened_at(sort: Desc)], map: "idx_chat_access_log_admin")
+}

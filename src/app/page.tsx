@@ -1,103 +1,148 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  Users,
+  IdCard,
+  CreditCard,
+  MessageSquare,
+  Flag,
+  BadgeCheck,
+  UsersRound,
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  AgeBarChart,
+  CountryBarChart,
+  GenderPieChart,
+  SignupsAreaChart,
+} from "@/components/charts";
+import { getDashboardAnalytics } from "@/lib/analytics";
+import { moneyPence } from "@/lib/format";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const a = await getDashboardAnalytics();
+
+  const stats = [
+    { label: "Users", value: a.users, href: "/users", icon: Users, hint: "accounts" },
+    { label: "Profiles", value: a.profiles, href: "/profiles", icon: IdCard, hint: `${a.approved} approved` },
+    { label: "Avg age", value: a.avgAge ?? "—", href: "/profiles", icon: BadgeCheck, hint: `${a.minAge ?? "—"}–${a.maxAge ?? "—"} yrs` },
+    { label: "Gender split", value: `${a.males}/${a.females}`, href: "/profiles", icon: UsersRound, hint: "M / F" },
+    { label: "Revenue", value: moneyPence(a.revenuePence), href: "/payments", icon: CreditCard, hint: `${a.completedPayments} paid` },
+    { label: "Messages", value: a.messages, href: "/requests", icon: MessageSquare, hint: `${a.requests} requests` },
+    { label: "Subscriptions", value: a.subscriptions, href: "/payments", icon: CreditCard, hint: "gold plans" },
+    { label: "Open reports", value: a.openReports, href: "/reports", icon: Flag, hint: "needs review" },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-heading text-3xl font-medium tracking-tight">Dashboard</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live stats from migrated profiles — age, gender, country, payments and more.
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <Badge variant="secondary" className="w-fit">
+          {a.approved} approved · {a.rejected} rejected · {a.suspended} suspended
+        </Badge>
+      </div>
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Link key={s.label} href={s.href} className="group">
+              <Card className="h-full transition group-hover:ring-primary/25 group-hover:shadow-sm">
+                <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
+                  <CardDescription>{s.label}</CardDescription>
+                  <span className="rounded-lg bg-accent p-1.5 text-accent-foreground">
+                    <Icon className="size-3.5" />
+                  </span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums">
+                    {typeof s.value === "number" ? s.value.toLocaleString() : s.value}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.hint}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Signups · last 30 days</CardTitle>
+            <CardDescription>New user registrations by day</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SignupsAreaChart data={a.signups} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Gender</CardTitle>
+            <CardDescription>Profile gender distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GenderPieChart data={a.gender} />
+            <div className="mt-2 flex justify-center gap-4 text-xs text-muted-foreground">
+              {a.gender.map((g) => (
+                <span key={g.name}>
+                  {g.name}: <strong className="text-foreground">{g.value}</strong>
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Age buckets</CardTitle>
+            <CardDescription>How old members are on average ({a.avgAge ?? "—"} yrs)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AgeBarChart data={a.ageBuckets} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top countries</CardTitle>
+            <CardDescription>Where profiles say they live</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CountryBarChart data={a.countries} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Marital status</CardTitle>
+          <CardDescription>From signup questionnaire fields</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {a.marital.map((m) => (
+              <div
+                key={m.name}
+                className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-3 py-2.5"
+              >
+                <span className="text-sm">{m.name}</span>
+                <span className="text-sm font-semibold tabular-nums">{m.value}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
