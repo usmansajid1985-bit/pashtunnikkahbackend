@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 /** Bump when schema/client config changes so the HMR singleton is not reused. */
-const PRISMA_SCHEMA_REV = 7;
+const PRISMA_SCHEMA_REV = 8;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -29,8 +29,21 @@ function createPool() {
 
   const connectionString = needsRelaxedSsl ? stripSslMode(raw) : raw;
 
+  // Supabase session-mode pooler (5432) caps the project at ~15 dedicated
+  // connections; transaction mode (6543 / pgbouncer=true) multiplexes. Every
+  // instance opens its own pg Pool, so cap it hard — an uncapped pool (pg
+  // default max: 10) plus the web app exhausts session mode immediately.
+  const isTransactionPooler =
+    url.includes(":6543") || url.includes("pgbouncer=true");
+  const max = Number(
+    process.env.DB_POOL_MAX ?? (isTransactionPooler ? 8 : 3)
+  );
+
   return new Pool({
     connectionString,
+    max: Number.isFinite(max) && max > 0 ? max : 3,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
     ...(needsRelaxedSsl
       ? { ssl: { rejectUnauthorized: false as const } }
       : {}),
