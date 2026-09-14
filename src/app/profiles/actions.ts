@@ -42,6 +42,7 @@ async function log(userId: bigint | null, action: string, note?: string | null) 
 }
 
 export async function updateProfileStatus(formData: FormData) {
+  await currentAdminId(); // PN-BACKEND-003: re-check auth before writing, not just when logging
   const id = BigInt(String(formData.get("id")));
   const status = String(formData.get("status") || "").toLowerCase();
   const allowed = ["approved", "pending", "rejected", "suspended", "unverified"];
@@ -84,6 +85,7 @@ export async function updateProfileStatus(formData: FormData) {
 }
 
 export async function updatePhotoStatus(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const photoStatus = String(formData.get("photo_status") || "").toLowerCase();
   const allowed = ["approved", "pending", "rejected"];
@@ -107,6 +109,7 @@ export async function updatePhotoStatus(formData: FormData) {
 }
 
 export async function toggleProfileHidden(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const profile = await prisma.profiles.findUnique({ where: { id } });
   if (!profile) return;
@@ -121,6 +124,7 @@ export async function toggleProfileHidden(formData: FormData) {
 }
 
 export async function updateUserAccount(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const account_status = String(formData.get("account_status") || "").toLowerCase();
   const plan = String(formData.get("plan") || "").toLowerCase();
@@ -170,6 +174,7 @@ export async function updateUserAccount(formData: FormData) {
 
 /** One-click block/unblock — toggles account_status without touching plan/credits. */
 export async function toggleUserBlock(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const user = await prisma.users.findUnique({ where: { id } });
   if (!user) return;
@@ -250,6 +255,7 @@ export async function addUserNote(formData: FormData) {
 }
 
 export async function resolveReport(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const status = String(formData.get("status") || "resolved").toLowerCase();
   const allowed = ["open", "resolved", "dismissed"];
@@ -264,6 +270,7 @@ export async function resolveReport(formData: FormData) {
 }
 
 export async function reviewFlaggedMessage(formData: FormData) {
+  await currentAdminId();
   const id = BigInt(String(formData.get("id")));
   const reviewed = formData.get("reviewed") !== "false";
   await prisma.flagged_messages.update({
@@ -274,6 +281,7 @@ export async function reviewFlaggedMessage(formData: FormData) {
 }
 
 export async function warnUser(formData: FormData) {
+  await currentAdminId();
   const userId = BigInt(String(formData.get("user_id")));
   await prisma.profiles.updateMany({
     where: { user_id: userId },
@@ -334,6 +342,7 @@ export async function removeMessage(formData: FormData) {
 }
 
 export async function saveAnnouncement(formData: FormData) {
+  await currentAdminId();
   const idRaw = String(formData.get("id") || "");
   const title = String(formData.get("title") || "").trim();
   const body = String(formData.get("body") || "").trim();
@@ -376,6 +385,7 @@ export async function saveAnnouncement(formData: FormData) {
 }
 
 export async function bulkApprovePending(formData: FormData) {
+  await currentAdminId();
   const ids = formData.getAll("ids").map((v) => BigInt(String(v)));
   if (!ids.length) return;
   const profiles = await prisma.profiles.findMany({ where: { id: { in: ids } } });

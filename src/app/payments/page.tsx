@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { fmtDate, moneyPence, pageCount } from "@/lib/format";
+import { fmtDate, moneyPence, moneyWithCurrency, pageCount } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { PaginationBar } from "@/components/pagination-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,7 +135,7 @@ export default async function PaymentsPage({
                 </TableCell>
                 <TableCell>{p.type}</TableCell>
                 <TableCell>{p.plan_or_pack}</TableCell>
-                <TableCell className="tabular-nums">{moneyPence(p.amount_pence)}</TableCell>
+                <TableCell className="tabular-nums">{moneyWithCurrency(p.amount_pence, p.currency)}</TableCell>
                 <TableCell>
                   <StatusBadge value={p.status} />
                 </TableCell>
@@ -189,7 +189,7 @@ export default async function PaymentsPage({
                     </Link>
                   </TableCell>
                   <TableCell>{s.plan}</TableCell>
-                  <TableCell>{moneyPence(s.amount_pence)}</TableCell>
+                  <TableCell>{moneyWithCurrency(s.amount_pence, s.currency)}</TableCell>
                   <TableCell className="whitespace-nowrap">{fmtDate(s.subscription_started_at)}</TableCell>
                   <TableCell className="font-mono text-[11px] max-w-[160px] truncate">
                     {s.stripe_subscription_id || "—"}

@@ -3,13 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { deleteHeroFile, saveHeroFile } from "@/lib/hero-uploads";
+import { getAdminSession } from "@/lib/admin-auth";
 
 async function nextId() {
   const max = await prisma.hero_slides.aggregate({ _max: { id: true } });
   return (max._max.id ?? BigInt(0)) + BigInt(1);
 }
 
+/** PN-BACKEND-003: re-check auth before writing — middleware is the only gate otherwise. */
+async function assertAdmin() {
+  const session = await getAdminSession();
+  if (!session) throw new Error("Not authenticated");
+}
+
 export async function addHeroSlide(formData: FormData) {
+  await assertAdmin();
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Choose an image to upload." };
@@ -43,6 +51,7 @@ export async function addHeroSlide(formData: FormData) {
 }
 
 export async function toggleHeroSlide(formData: FormData) {
+  await assertAdmin();
   const id = BigInt(String(formData.get("id")));
   const slide = await prisma.hero_slides.findUnique({ where: { id } });
   if (!slide) return;
@@ -56,6 +65,7 @@ export async function toggleHeroSlide(formData: FormData) {
 }
 
 export async function moveHeroSlide(formData: FormData) {
+  await assertAdmin();
   const id = BigInt(String(formData.get("id")));
   const dir = String(formData.get("dir")) === "up" ? -1 : 1;
   const slides = await prisma.$queryRaw<{ id: bigint; sort_order: number }[]>`
@@ -75,6 +85,7 @@ export async function moveHeroSlide(formData: FormData) {
 }
 
 export async function deleteHeroSlide(formData: FormData) {
+  await assertAdmin();
   const id = BigInt(String(formData.get("id")));
   const slide = await prisma.hero_slides.findUnique({ where: { id } });
   if (!slide) return;

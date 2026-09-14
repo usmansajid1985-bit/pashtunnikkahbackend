@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { fmtDate, moneyPence } from "@/lib/format";
+import { fmtDate, moneyWithCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { adjustCredits, addUserNote, updateUserAccount, warnUser, toggleUserBlock } from "@/app/profiles/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -333,7 +333,7 @@ export default async function UserDetailPage({
               <TableRow key={pay.id.toString()}>
                 <TableCell>{pay.type}</TableCell>
                 <TableCell>{pay.plan_or_pack}</TableCell>
-                <TableCell>{moneyPence(pay.amount_pence)}</TableCell>
+                <TableCell>{moneyWithCurrency(pay.amount_pence, pay.currency)}</TableCell>
                 <TableCell>
                   <StatusBadge value={pay.status} />
                 </TableCell>
