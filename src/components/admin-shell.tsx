@@ -19,6 +19,7 @@ import {
   UserCog,
   LogOut,
   ListChecks,
+  ClipboardCheck,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ const nav = [
   { href: "/reports", label: "Reports", icon: Flag },
   { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/qa-checklist", label: "QA Checklist", icon: ClipboardCheck },
   { href: "/roadmap", label: "Roadmap", icon: ListChecks },
   { href: "/account", label: "Account", icon: UserCog },
 ];

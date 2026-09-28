@@ -97,10 +97,6 @@ export default function RoadmapPage() {
         );
       })}
 
-      <p className="text-xs text-muted-foreground">
-        Full write-up with file:line evidence: <code>docs/MEMBERSHIP_MATCHING_SPEC.md</code> in
-        the project root.
-      </p>
     </div>
   );
 }
