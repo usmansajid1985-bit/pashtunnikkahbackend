@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ensureMatchEndSchema } from "@/lib/ensure-match-end-schema";
-import { notifyProfileStatus } from "@/lib/notify-web";
+import { notifyMemberWarning, notifyProfileStatus } from "@/lib/notify-web";
 
 async function nextModerationId() {
   const max = await prisma.moderation_log.aggregate({ _max: { id: true } });
@@ -258,19 +258,57 @@ export async function addUserNote(formData: FormData) {
   revalidatePath(`/users/${userId}`);
 }
 
-export async function resolveReport(formData: FormData) {
-  await currentAdminId();
+/**
+ * A03: one decision per report, each recorded with the admin, action, reason and time.
+ *  - resolved  → reviewed and actioned
+ *  - dismissed → closed with no action against the member
+ *  - warned    → formal warning sent to the reported member (shown in their account + push)
+ *  - open      → reopen
+ */
+export async function decideReport(formData: FormData) {
+  const adminId = await currentAdminId();
   const id = BigInt(String(formData.get("id")));
-  const status = String(formData.get("status") || "resolved").toLowerCase();
-  const allowed = ["open", "resolved", "dismissed"];
-  if (!allowed.includes(status)) return;
+  const decision = String(formData.get("decision") || "").toLowerCase();
+  const note = String(formData.get("note") || "").trim().slice(0, 1000) || null;
+  if (!["resolved", "dismissed", "warned", "open"].includes(decision)) return;
+  if (decision === "warned" && !note) return; // the warning text is what the member reads
 
-  const report = await prisma.reports.update({
+  const report = await prisma.reports.findUnique({ where: { id } });
+  if (!report) return;
+
+  if (decision === "warned") {
+    const rows = await prisma.$queryRaw<{ id: bigint }[]>`
+      INSERT INTO member_warnings (user_id, report_id, admin_id, message)
+      VALUES (${report.reported_id}, ${id}, ${adminId}, ${note})
+      RETURNING id
+    `;
+    await prisma.profiles.updateMany({
+      where: { user_id: report.reported_id },
+      data: { warn_count: { increment: 1 }, updated_at: new Date() },
+    });
+    await notifyMemberWarning(report.reported_id, rows[0]?.id ?? null);
+  }
+
+  await prisma.reports.update({
     where: { id },
-    data: { status },
+    data:
+      decision === "open"
+        ? { status: "open", resolution: null, resolution_note: null, resolved_at: null, resolved_by: null }
+        : {
+            status: decision === "dismissed" ? "dismissed" : "resolved",
+            resolution: decision,
+            resolution_note: note,
+            resolved_at: new Date(),
+            resolved_by: adminId,
+          },
   });
-  await log(report.reported_id, `report_${status}`, `report #${id}`);
+  await log(
+    report.reported_id,
+    decision === "warned" ? "user_warned" : `report_${decision}`,
+    `report #${id}${note ? ` — ${note}` : ""}`
+  );
   revalidatePath("/reports");
+  revalidatePath(`/users/${report.reported_id}`);
 }
 
 export async function reviewFlaggedMessage(formData: FormData) {
@@ -284,14 +322,25 @@ export async function reviewFlaggedMessage(formData: FormData) {
   revalidatePath("/reports");
 }
 
+const DEFAULT_WARNING =
+  "Please keep your conversations respectful and within the Pashtun Nikah community guidelines. Further reports may lead to your account being restricted.";
+
+/** A03: a real warning — stored, shown in the member's account, pushed, and logged. */
 export async function warnUser(formData: FormData) {
-  await currentAdminId();
+  const adminId = await currentAdminId();
   const userId = BigInt(String(formData.get("user_id")));
+  const note = String(formData.get("note") || "").trim().slice(0, 1000) || DEFAULT_WARNING;
+  const rows = await prisma.$queryRaw<{ id: bigint }[]>`
+    INSERT INTO member_warnings (user_id, admin_id, message)
+    VALUES (${userId}, ${adminId}, ${note})
+    RETURNING id
+  `;
   await prisma.profiles.updateMany({
     where: { user_id: userId },
     data: { warn_count: { increment: 1 }, updated_at: new Date() },
   });
-  await log(userId, "user_warned");
+  await notifyMemberWarning(userId, rows[0]?.id ?? null);
+  await log(userId, "user_warned", note);
   revalidatePath(`/users/${userId}`);
   revalidatePath("/reports");
 }

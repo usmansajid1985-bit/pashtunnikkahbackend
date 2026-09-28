@@ -402,6 +402,10 @@ model reports {
   details                          String?
   request_id                       BigInt?
   message_id                       BigInt?
+  resolved_at                      DateTime? @db.Timestamptz(6)
+  resolved_by                      BigInt?
+  resolution                       String?
+  resolution_note                  String?
   users_reports_reported_idTousers users    @relation("reports_reported_idTousers", fields: [reported_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users_reports_reporter_idTousers users    @relation("reports_reporter_idTousers", fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -519,6 +523,9 @@ model wali_links {
   revoked_at       DateTime? @db.Timestamptz(6)
   last_accessed_at DateTime? @db.Timestamptz(6)
   created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  mode             String    @default("oversight") @db.VarChar(32)
+  email            String?   @db.VarChar(255)
+  accepted_at      DateTime? @db.Timestamptz(6)
   profiles         profiles  @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users            users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 

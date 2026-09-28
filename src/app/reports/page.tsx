@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { fmtDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
-import { resolveReport, reviewFlaggedMessage, warnUser } from "@/app/profiles/actions";
+import { decideReport, reviewFlaggedMessage, warnUser } from "@/app/profiles/actions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +67,11 @@ export default async function ReportsPage() {
       })
     : [];
   const messageById = new Map(reportedMessages.map((m) => [m.id.toString(), m]));
+  const adminIds = [...new Set(reports.map((r) => r.resolved_by).filter((v): v is bigint => v != null))];
+  const admins = adminIds.length
+    ? await prisma.users.findMany({ where: { id: { in: adminIds } }, select: { id: true, email: true } })
+    : [];
+  const adminLabel = new Map(admins.map((a) => [a.id.toString(), a.email]));
   const codeOf = (u: { email: string; profiles: { profile_code: string | null } | null }) =>
     u.profiles?.profile_code || u.email;
 
@@ -138,40 +143,49 @@ export default async function ReportsPage() {
                 </TableCell>
                 <TableCell className="whitespace-nowrap">{fmtDate(r.created_at)}</TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {r.status === "open" ? (
-                      <>
-                        <form action={resolveReport}>
-                          <input type="hidden" name="id" value={r.id.toString()} />
-                          <input type="hidden" name="status" value="resolved" />
-                          <Button type="submit" size="sm" variant="secondary">
-                            Resolve
-                          </Button>
-                        </form>
-                        <form action={resolveReport}>
-                          <input type="hidden" name="id" value={r.id.toString()} />
-                          <input type="hidden" name="status" value="dismissed" />
-                          <Button type="submit" size="sm" variant="outline">
-                            Dismiss
-                          </Button>
-                        </form>
-                        <form action={warnUser}>
-                          <input type="hidden" name="user_id" value={r.reported_id.toString()} />
-                          <Button type="submit" size="sm" variant="outline">
-                            Warn
-                          </Button>
-                        </form>
-                      </>
-                    ) : (
-                      <form action={resolveReport}>
+                  {r.status === "open" ? (
+                    /* A03: one form, three distinct decisions — each recorded with admin, reason, time. */
+                    <form action={decideReport} className="space-y-1.5 min-w-[220px]">
+                      <input type="hidden" name="id" value={r.id.toString()} />
+                      <textarea
+                        name="note"
+                        rows={2}
+                        placeholder="Reason / note (required to warn — the member sees it)"
+                        className="w-full rounded-md border px-2 py-1 text-xs"
+                      />
+                      <div className="flex flex-wrap gap-1">
+                        <Button type="submit" name="decision" value="resolved" size="sm" variant="secondary">
+                          Resolve
+                        </Button>
+                        <Button type="submit" name="decision" value="dismissed" size="sm" variant="outline">
+                          Dismiss
+                        </Button>
+                        <Button type="submit" name="decision" value="warned" size="sm" variant="destructive">
+                          Warn member
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Resolve = reviewed &amp; actioned · Dismiss = no action · Warn = sends the note to the member
+                      </p>
+                    </form>
+                  ) : (
+                    <div className="space-y-1 text-xs">
+                      <p className="font-medium capitalize">
+                        {r.resolution === "warned" ? "Member warned" : r.resolution || r.status}
+                      </p>
+                      {r.resolution_note ? <p className="text-muted-foreground">“{r.resolution_note}”</p> : null}
+                      <p className="text-muted-foreground">
+                        {r.resolved_by ? `by ${adminLabel.get(r.resolved_by.toString()) ?? `admin #${r.resolved_by}`}` : ""}
+                        {r.resolved_at ? ` · ${fmtDate(r.resolved_at)}` : ""}
+                      </p>
+                      <form action={decideReport}>
                         <input type="hidden" name="id" value={r.id.toString()} />
-                        <input type="hidden" name="status" value="open" />
-                        <Button type="submit" size="sm" variant="ghost">
+                        <Button type="submit" name="decision" value="open" size="sm" variant="ghost">
                           Reopen
                         </Button>
                       </form>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
