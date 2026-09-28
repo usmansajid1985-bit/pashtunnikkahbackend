@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 import { ensureMatchEndSchema } from "@/lib/ensure-match-end-schema";
+import { notifyProfileStatus } from "@/lib/notify-web";
 
 async function nextModerationId() {
   const max = await prisma.moderation_log.aggregate({ _max: { id: true } });
@@ -78,6 +79,9 @@ export async function updateProfileStatus(formData: FormData) {
   }
 
   await log(profile.user_id, `profile_${status}`, rejection);
+  // N08: push + bell + live update for the member — only on an actual change, so re-saving an
+  // already-approved profile doesn't send "approved" again.
+  if (profile.status !== status) await notifyProfileStatus(profile.user_id, status);
 
   revalidatePath(`/profiles/${id}`);
   revalidatePath("/profiles");
@@ -399,6 +403,7 @@ export async function bulkApprovePending(formData: FormData) {
       data: { approved_at: new Date(), account_status: "active", updated_at: new Date() },
     });
     await log(p.user_id, "profile_approved", "bulk");
+    if (p.status !== "approved") await notifyProfileStatus(p.user_id, "approved");
   }
   revalidatePath("/profiles");
 }

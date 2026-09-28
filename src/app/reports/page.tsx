@@ -20,8 +20,8 @@ export default async function ReportsPage() {
   const [reports, flagged, warnings] = await Promise.all([
     prisma.reports.findMany({
       include: {
-        users_reports_reporter_idTousers: { select: { email: true } },
-        users_reports_reported_idTousers: { select: { email: true } },
+        users_reports_reporter_idTousers: { select: { email: true, profiles: { select: { profile_code: true } } } },
+        users_reports_reported_idTousers: { select: { email: true, profiles: { select: { profile_code: true } } } },
       },
       orderBy: { created_at: "desc" },
       take: 50,
@@ -58,6 +58,18 @@ export default async function ReportsPage() {
     `.catch(() => []),
   ]);
 
+  // A02: the reported message (when one was picked) so the admin sees it in context.
+  const reportedMessageIds = reports.map((r) => r.message_id).filter((id): id is bigint => id != null);
+  const reportedMessages = reportedMessageIds.length
+    ? await prisma.messages.findMany({
+        where: { id: { in: reportedMessageIds } },
+        select: { id: true, body: true, created_at: true },
+      })
+    : [];
+  const messageById = new Map(reportedMessages.map((m) => [m.id.toString(), m]));
+  const codeOf = (u: { email: string; profiles: { profile_code: string | null } | null }) =>
+    u.profiles?.profile_code || u.email;
+
   return (
     <div className="space-y-8">
       <div>
@@ -90,15 +102,37 @@ export default async function ReportsPage() {
               <TableRow key={r.id.toString()}>
                 <TableCell>
                   <Link href={`/users/${r.reporter_id}`} className="text-primary hover:underline">
-                    {r.users_reports_reporter_idTousers.email}
+                    {codeOf(r.users_reports_reporter_idTousers)}
                   </Link>
                 </TableCell>
                 <TableCell>
                   <Link href={`/users/${r.reported_id}`} className="text-primary hover:underline">
-                    {r.users_reports_reported_idTousers.email}
+                    {codeOf(r.users_reports_reported_idTousers)}
                   </Link>
                 </TableCell>
-                <TableCell className="max-w-md">{r.reason}</TableCell>
+                <TableCell className="max-w-md align-top">
+                  {r.category ? (
+                    <div className="space-y-1.5">
+                      <p className="font-medium">{r.category.replace(/_/g, " ")}</p>
+                      {r.details ? <p className="text-sm whitespace-pre-wrap">{r.details}</p> : null}
+                      {r.message_id && messageById.get(r.message_id.toString()) ? (
+                        <blockquote className="border-l-2 pl-2 text-sm text-muted-foreground">
+                          “{messageById.get(r.message_id.toString())!.body}”
+                          <span className="block text-xs">
+                            sent {fmtDate(messageById.get(r.message_id.toString())!.created_at)}
+                          </span>
+                        </blockquote>
+                      ) : null}
+                      {r.request_id ? (
+                        <Link href={`/chats/${r.request_id}`} className="text-xs text-primary hover:underline">
+                          Open conversation #{r.request_id.toString()} →
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : (
+                    r.reason
+                  )}
+                </TableCell>
                 <TableCell>
                   <StatusBadge value={r.status} />
                 </TableCell>

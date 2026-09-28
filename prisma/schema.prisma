@@ -398,6 +398,10 @@ model reports {
   reason                           String
   status                           String   @default("open") @db.VarChar(32)
   created_at                       DateTime @default(now()) @db.Timestamptz(6)
+  category                         String?  @db.VarChar(40)
+  details                          String?
+  request_id                       BigInt?
+  message_id                       BigInt?
   users_reports_reported_idTousers users    @relation("reports_reported_idTousers", fields: [reported_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users_reports_reporter_idTousers users    @relation("reports_reporter_idTousers", fields: [reporter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
