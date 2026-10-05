@@ -345,7 +345,7 @@ export default async function ProfileDetailPage({
             </CardHeader>
             <CardContent className="grid gap-2.5">
               <Info title="Email" value={profile.email} />
-              <Info title="Phone" value={profile.phone ? `${profile.phone_country_code || ""} ${profile.phone}` : null} />
+              <Info title="Phone" value={profile.phone ? (profile.phone.startsWith("+") ? profile.phone : `${profile.phone_country_code || ""} ${profile.phone}`) : null} />
               <Info title="DOB" value={profile.dob ? profile.dob.toISOString().slice(0, 10) : null} />
               <Info title="Legal status" value={profile.legal_status} />
               <Info title="Weight / build" value={[profile.weight, profile.build].filter(Boolean).join(" · ") || null} />
