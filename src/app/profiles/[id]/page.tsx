@@ -1,3 +1,4 @@
+import { signedPhotoUrl } from "@/lib/photos";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -75,8 +76,13 @@ export default async function ProfileDetailPage({
 
   if (!profile) notFound();
 
-  const photoSrc = resolveSrc(profile.photo_url);
-  const verSrc = resolveSrc(profile.photo_verification_url);
+  // Private bucket: sign the links on the server or the images won't load.
+  const [signedPhoto, signedVerification] = await Promise.all([
+    signedPhotoUrl(profile.photo_url),
+    profile.photo_verification_url === profile.photo_url ? null : signedPhotoUrl(profile.photo_verification_url),
+  ]);
+  const photoSrc = resolveSrc(signedPhoto);
+  const verSrc = resolveSrc(signedVerification);
   const location = [profile.city || profile.current_location, profile.country].filter(Boolean).join(", ");
 
   const faith: [string, string | number | null | undefined][] = [

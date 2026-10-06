@@ -105,9 +105,47 @@ export async function updatePhotoStatus(formData: FormData) {
       updated_at: new Date(),
     },
   });
+  // Keep the member's main photo row in step (the web app reads per-photo status for sharing).
+  await prisma.$executeRaw`
+    UPDATE profile_photos SET status = ${photoStatus}, updated_at = NOW()
+    WHERE user_id = ${profile.user_id} AND is_main = TRUE
+  `.catch(() => undefined);
   await log(profile.user_id, `photo_${photoStatus}`, profile.photo_url);
 
   revalidatePath(`/profiles/${id}`);
+  revalidatePath("/photos");
+  revalidatePath("/profiles");
+}
+
+/**
+ * Approve / reject ONE of a member's (up to 3) photos. Until this existed only the main photo
+ * could be reviewed, so a second or third photo stayed "pending" forever and could never be shared.
+ */
+export async function reviewMemberPhoto(formData: FormData) {
+  await currentAdminId();
+  const photoId = BigInt(String(formData.get("photo_id")));
+  const status = String(formData.get("photo_status") || "").toLowerCase();
+  if (!["approved", "rejected"].includes(status)) return;
+
+  const rows = await prisma.$queryRaw<{ user_id: bigint; url: string; is_main: boolean }[]>`
+    UPDATE profile_photos SET status = ${status}, updated_at = NOW()
+    WHERE id = ${photoId}
+    RETURNING user_id, url, is_main
+  `;
+  const photo = rows[0];
+  if (!photo) return;
+
+  // The main photo also drives `profiles.photo_status`, which Browse and the rest of the app read.
+  const profile = await prisma.profiles.findUnique({ where: { user_id: photo.user_id }, select: { id: true } });
+  if (photo.is_main && profile) {
+    await prisma.profiles.update({
+      where: { id: profile.id },
+      data: { photo_status: status, updated_at: new Date() },
+    });
+  }
+  await log(photo.user_id, `photo_${status}`, photo.url);
+
+  if (profile) revalidatePath(`/profiles/${profile.id}`);
   revalidatePath("/photos");
   revalidatePath("/profiles");
 }
