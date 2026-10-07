@@ -20,7 +20,8 @@ function photoSrc(url: string | null | undefined) {
 type PhotoRow = { id: bigint; user_id: bigint; url: string; status: string; is_main: boolean };
 
 export default async function PhotosQueuePage() {
-  // Every photo (main + extra) of any member who has at least one awaiting review.
+  // Photos of any member who has at least one awaiting review. All of them are loaded so each
+  // keeps its real position ("Photo 2"), but only the ones still pending are shown below.
   const rows = await prisma.$queryRaw<PhotoRow[]>`
     SELECT id, user_id, url, status, is_main
     FROM profile_photos
@@ -42,21 +43,23 @@ export default async function PhotosQueuePage() {
   });
 
   // The bucket is private: sign every link on the server before rendering.
-  const photosByProfile = new Map<string, MemberPhoto[]>();
+  const photosByProfile = new Map<string, (MemberPhoto & { position: number })[]>();
   const verificationByProfile = new Map<string, string | null>();
   await Promise.all(
     pending.map(async (p) => {
       const own = rows.filter((r) => r.user_id === p.user_id);
-      const photos: MemberPhoto[] = own.length
+      const awaiting = own.map((r, i) => ({ r, position: i + 1 })).filter(({ r }) => r.status === "pending");
+      const photos: (MemberPhoto & { position: number })[] = own.length
         ? await Promise.all(
-            own.map(async (r) => ({
+            awaiting.map(async ({ r, position }) => ({
               id: r.id.toString(),
               src: photoSrc(await signedPhotoUrl(r.url)),
               status: r.status,
               isMain: r.is_main,
+              position,
             }))
           )
-        : [{ id: null, src: photoSrc(await signedPhotoUrl(p.photo_url)), status: p.photo_status || "pending", isMain: true }];
+        : [{ id: null, src: photoSrc(await signedPhotoUrl(p.photo_url)), status: (p.photo_status || "pending").toLowerCase(), isMain: true, position: 1 }];
       photosByProfile.set(p.id.toString(), photos);
       const sameAsMain = p.photo_verification_url === p.photo_url;
       verificationByProfile.set(
@@ -65,6 +68,9 @@ export default async function PhotosQueuePage() {
       );
     })
   );
+
+  // A member whose photos have all been reviewed drops out of the queue.
+  const queue = pending.filter((p) => (photosByProfile.get(p.id.toString()) ?? []).some((ph) => ph.status === "pending"));
 
   const recent = await prisma.profiles.findMany({
     where: {
@@ -84,32 +90,36 @@ export default async function PhotosQueuePage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {pending.length === 0 && (
-          <Card className="sm:col-span-2 xl:col-span-3">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        {queue.length === 0 && (
+          <Card className="col-span-full">
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
               No photos awaiting review.
             </CardContent>
           </Card>
         )}
-        {pending.map((p) => {
+        {queue.map((p) => {
           const photos = photosByProfile.get(p.id.toString()) ?? [];
           const ver = verificationByProfile.get(p.id.toString()) ?? null;
           return (
-            <Card key={p.id.toString()} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+            <Card key={p.id.toString()} className="overflow-hidden gap-2 py-3">
+              <CardHeader className="px-3 pb-0">
+                <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
                   <Link href={`/profiles/${p.id}`} className="hover:text-primary">
                     {p.profile_code || p.full_name || `#${p.id}`}
                   </Link>
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {p.users.email} · {p.gender} · profile {p.status} · {fmtDate(p.updated_at)}
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  <span className="block truncate" title={p.users.email}>
+                    {p.users.email}
+                  </span>
+                  {p.gender} · profile {p.status}
+                  <span className="block">{fmtDate(p.updated_at)}</span>
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 px-3">
                 {photos.map((photo, i) => (
-                  <div key={photo.id ?? `legacy-${i}`} className="space-y-2">
+                  <div key={photo.id ?? `legacy-${i}`} className="space-y-1.5">
                     <div className="aspect-[4/5] bg-muted relative rounded-lg overflow-hidden">
                       {photo.src ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -121,17 +131,17 @@ export default async function PhotosQueuePage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">{photo.isMain ? "Main photo" : `Photo ${i + 1}`}</span>
+                      <span className="font-medium text-foreground">{photo.isMain ? "Main photo" : `Photo ${photo.position}`}</span>
                       <StatusBadge value={photo.status} />
                     </div>
                     {photo.status === "pending" ? (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {(["approved", "rejected"] as const).map((next) => (
                           <form key={next} action={photo.id ? reviewMemberPhoto : updatePhotoStatus}>
                             <input type="hidden" name={photo.id ? "photo_id" : "id"} value={photo.id ?? p.id.toString()} />
                             <input type="hidden" name="photo_status" value={next} />
-                            <Button type="submit" size="sm" variant={next === "approved" ? "default" : "outline"}>
-                              {next === "approved" ? "Approve photo" : "Reject photo"}
+                            <Button type="submit" size="sm" className="h-7 px-2.5 text-xs" variant={next === "approved" ? "default" : "outline"}>
+                              {next === "approved" ? "Approve" : "Reject"}
                             </Button>
                           </form>
                         ))}
@@ -143,7 +153,7 @@ export default async function PhotosQueuePage() {
                   <div>
                     <p className="text-[11px] uppercase text-muted-foreground mb-1">Verification (mods only)</p>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ver} alt="" className="h-24 w-24 rounded-lg object-cover border" />
+                    <img src={ver} alt="" className="h-16 w-16 rounded-lg object-cover border" />
                   </div>
                 ) : null}
                 {p.status === "pending" ? (
