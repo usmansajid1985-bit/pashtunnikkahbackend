@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { endMatch, removeMessage } from "@/app/profiles/actions";
 import { isMessageRemoved } from "@/lib/ensure-message-removals";
+import { isTestAccountEmail, loadFamilyStatus } from "@/lib/family-flow";
+import { forceFamilyEligible, resetFamilyFlow } from "./family-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +104,19 @@ export default async function ChatDetailPage({
 
   const sender = match.users_match_requests_sender_idTousers;
   const receiver = match.users_match_requests_receiver_idTousers;
+  const family = await loadFamilyStatus(id).catch(() => null);
+  const isTestMatch = isTestAccountEmail(sender?.email) && isTestAccountEmail(receiver?.email);
+  const familyStage = !family
+    ? "—"
+    : family.wali_contact_confirmed_at
+      ? "Wali contacted"
+      : family.wali_details_shared_at
+        ? "Wali details shared"
+        : family.family_request_state === "pending"
+          ? "Requested — waiting for her"
+          : family.family_request_state === "declined"
+            ? "She said not now"
+            : "Not started";
 
   return (
     <div className="space-y-8">
@@ -167,9 +182,6 @@ export default async function ChatDetailPage({
             {match.end_reason ? ` · ${match.end_reason}` : ""}
           </span>
         ) : null}
-        {match.wali_handover_status ? (
-          <span className="text-muted-foreground">Wali: {match.wali_handover_status}</span>
-        ) : null}
         {match.status === "accepted" ? (
           <form action={endMatch}>
             <input type="hidden" name="request_id" value={match.id.toString()} />
@@ -179,6 +191,59 @@ export default async function ChatDetailPage({
           </form>
         ) : null}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Involve Family</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-muted-foreground">
+            <span>
+              Stage: <span className="font-medium text-foreground">{familyStage}</span>
+            </span>
+            {family?.family_requested_at ? <span>Requested {fmtDate(family.family_requested_at)}</span> : null}
+            {family?.family_declined_at ? <span>Declined {fmtDate(family.family_declined_at)}</span> : null}
+            {family?.wali_details_shared_at ? <span>Shared {fmtDate(family.wali_details_shared_at)}</span> : null}
+            {family?.wali_contact_confirmed_at ? (
+              <span>Contact confirmed {fmtDate(family.wali_contact_confirmed_at)}</span>
+            ) : null}
+            <span>
+              Automatic reminder:{" "}
+              {family?.family_auto_cancelled_at
+                ? "stopped"
+                : family?.family_auto_eligible_at
+                  ? `shown since ${fmtDate(family.family_auto_eligible_at)}`
+                  : family?.family_force_eligible
+                    ? "forced — shows when a member next opens the chat"
+                    : "not yet eligible"}
+            </span>
+          </div>
+          {isTestMatch ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">QA tools</span>
+              {match.status === "accepted" ? (
+                <form action={forceFamilyEligible}>
+                  <input type="hidden" name="request_id" value={match.id.toString()} />
+                  <Button type="submit" variant="outline" size="sm">
+                    Force automatic reminder
+                  </Button>
+                </form>
+              ) : null}
+              <form action={resetFamilyFlow}>
+                <input type="hidden" name="request_id" value={match.id.toString()} />
+                <Button type="submit" variant="outline" size="sm">
+                  Reset Family Flow
+                </Button>
+              </form>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              QA tools (force the automatic reminder, reset the flow) appear only when both members are test
+              accounts.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="overflow-hidden p-0">
         <div className="border-b px-4 py-3 font-medium">Messages</div>

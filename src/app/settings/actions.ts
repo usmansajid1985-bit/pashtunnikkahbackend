@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
+import { FAMILY_DEFAULTS, ensureFamilySchema, type FamilySettings } from "@/lib/family-flow";
 
 async function nextModerationId() {
   const max = await prisma.moderation_log.aggregate({ _max: { id: true } });
@@ -39,6 +40,41 @@ export async function updatePlanSettings(formData: FormData) {
       admin_id: adminId,
       action: "plan_settings_updated",
       note: plan,
+      created_at: new Date(),
+    },
+  });
+
+  revalidatePath("/settings");
+}
+
+/** Involve Family: reminder thresholds and notification copy, read live by the member app. */
+export async function updateFamilySettings(formData: FormData) {
+  const session = await getAdminSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const data: Record<string, number | string> = {};
+  for (const key of Object.keys(FAMILY_DEFAULTS) as (keyof FamilySettings)[]) {
+    const raw = String(formData.get(key) ?? "").trim();
+    if (typeof FAMILY_DEFAULTS[key] === "number") {
+      const n = Number(raw);
+      data[key] = raw !== "" && Number.isFinite(n) && n >= 0 ? n : FAMILY_DEFAULTS[key];
+    } else {
+      data[key] = raw.slice(0, 300) || FAMILY_DEFAULTS[key];
+    }
+  }
+
+  await ensureFamilySchema();
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO family_flow_settings (id, data, updated_at) VALUES (1, $1::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+    JSON.stringify(data)
+  );
+
+  await prisma.moderation_log.create({
+    data: {
+      id: await nextModerationId(),
+      admin_id: BigInt(session.adminId),
+      action: "family_settings_updated",
       created_at: new Date(),
     },
   });
