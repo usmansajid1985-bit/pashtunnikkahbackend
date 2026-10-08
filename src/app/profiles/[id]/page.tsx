@@ -115,7 +115,6 @@ export default async function ProfileDetailPage({
     ["Family origin", profile.family_origin],
     ["Ethnicity", profile.ethnicity],
     ["Tribe", profile.tribe],
-    ["Sub tribe", profile.sub_tribe],
     ["Khiel", profile.khiel],
     ["Relocate", profile.willing_to_relocate || profile.relocate],
     ["Pashto", profile.pashto_speaker || profile.pashto_level],
