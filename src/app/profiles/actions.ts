@@ -42,6 +42,33 @@ async function log(userId: bigint | null, action: string, note?: string | null) 
   });
 }
 
+/**
+ * `approved_at` is when the member was FIRST approved — the web app's 7-day "Just Joined" badge
+ * counts from it. Re-approving (after a suspension, an edit or a re-save) must not restart it.
+ */
+async function markFirstApproval(userId: bigint) {
+  await prisma.users.updateMany({
+    where: { id: userId, approved_at: null },
+    data: { approved_at: new Date() },
+  });
+}
+
+/**
+ * Photos are reviewed together with the profile: approving the profile approves the photos still
+ * waiting with it (any photo already rejected stays rejected). After that, members change photos
+ * without further review — see web `profile-photos.ts`.
+ */
+async function approvePhotosWithProfile(userId: bigint) {
+  await prisma.$executeRaw`
+    UPDATE profile_photos SET status = 'approved', updated_at = NOW()
+    WHERE user_id = ${userId} AND status = 'pending'
+  `.catch(() => undefined);
+  await prisma.profiles.updateMany({
+    where: { user_id: userId, photo_url: { not: null }, photo_status: { in: ["pending", "Pending"] } },
+    data: { photo_status: "approved" },
+  });
+}
+
 export async function updateProfileStatus(formData: FormData) {
   await currentAdminId(); // PN-BACKEND-003: re-check auth before writing, not just when logging
   const id = BigInt(String(formData.get("id")));
@@ -68,8 +95,10 @@ export async function updateProfileStatus(formData: FormData) {
   if (status === "approved") {
     await prisma.users.update({
       where: { id: profile.user_id },
-      data: { approved_at: new Date(), account_status: "active", updated_at: new Date() },
+      data: { account_status: "active", updated_at: new Date() },
     });
+    await markFirstApproval(profile.user_id);
+    await approvePhotosWithProfile(profile.user_id);
   }
   if (status === "suspended") {
     await prisma.users.update({
@@ -487,8 +516,10 @@ export async function bulkApprovePending(formData: FormData) {
   for (const p of profiles) {
     await prisma.users.update({
       where: { id: p.user_id },
-      data: { approved_at: new Date(), account_status: "active", updated_at: new Date() },
+      data: { account_status: "active", updated_at: new Date() },
     });
+    await markFirstApproval(p.user_id);
+    await approvePhotosWithProfile(p.user_id);
     await log(p.user_id, "profile_approved", "bulk");
     if (p.status !== "approved") await notifyProfileStatus(p.user_id, "approved");
   }
