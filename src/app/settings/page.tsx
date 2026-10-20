@@ -22,7 +22,9 @@ const FAMILY_NUMBERS: { name: keyof FamilySettings; label: string; hint?: string
   { name: "minActiveDaysEach", label: "Separate days each member took part" },
   { name: "recentActivityHours", label: "Both active within (hours)" },
   { name: "finalReminderAfterDays", label: "Final reminder after (days)", hint: "after Not now on the first reminder" },
-  { name: "requestCooldownDays", label: "Request cooldown (days)", hint: "before he can ask again after she says Not now" },
+  { name: "notYetFirstDays", label: "Wait after 1st \"Not yet\" (days)", hint: "minimum before he can ask again; she may choose longer" },
+  { name: "notYetSecondDays", label: "Wait after 2nd \"Not yet\" (days)", hint: "minimum before he can ask again; she may choose longer" },
+  { name: "notYetMaxRequests", label: "\"Not yet\" that ends his requests", hint: "e.g. 3 = after the third, only she can share her wali's details" },
   { name: "contactPromptAfterHours", label: "Ask \"Have you contacted the wali?\" after (hours)" },
   { name: "contactFollowupAfterDays", label: "Ask once more after (days)", hint: "after Not yet" },
 ];

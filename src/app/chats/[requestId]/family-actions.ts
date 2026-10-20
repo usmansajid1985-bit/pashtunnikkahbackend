@@ -73,6 +73,7 @@ export async function resetFamilyFlow(formData: FormData) {
             family_auto_dismiss_receiver = 0, family_auto_dismissed_receiver_at = NULL,
             family_auto_final_receiver_at = NULL,
             family_force_eligible = FALSE,
+            family_not_yet_count = 0, family_next_request_at = NULL, family_requests_closed = FALSE,
             wali_handover_status = NULL, wali_details_requested_at = NULL,
             wali_details_shared_at = NULL, wali_contact_attempted_at = NULL,
             wali_contact_confirmed_at = NULL, wali_handover_note = NULL

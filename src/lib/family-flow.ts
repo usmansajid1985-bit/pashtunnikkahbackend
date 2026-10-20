@@ -13,7 +13,11 @@ export type FamilySettings = {
   minActiveDaysEach: number;
   recentActivityHours: number;
   finalReminderAfterDays: number;
+  /** Legacy — replaced by the notYet* settings; no longer shown in the editor. */
   requestCooldownDays: number;
+  notYetFirstDays: number;
+  notYetSecondDays: number;
+  notYetMaxRequests: number;
   contactPromptAfterHours: number;
   contactFollowupAfterDays: number;
   pushTitle: string;
@@ -31,6 +35,9 @@ export const FAMILY_DEFAULTS: FamilySettings = {
   recentActivityHours: 48,
   finalReminderAfterDays: 7,
   requestCooldownDays: 7,
+  notYetFirstDays: 5,
+  notYetSecondDays: 10,
+  notYetMaxRequests: 3,
   contactPromptAfterHours: 24,
   contactFollowupAfterDays: 3,
   pushTitle: "Ready to involve family? ❤️",
@@ -62,7 +69,10 @@ export async function ensureFamilySchema() {
       ADD COLUMN IF NOT EXISTS family_auto_dismiss_receiver INT NOT NULL DEFAULT 0,
       ADD COLUMN IF NOT EXISTS family_auto_dismissed_receiver_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS family_auto_final_receiver_at TIMESTAMPTZ,
-      ADD COLUMN IF NOT EXISTS family_force_eligible BOOLEAN NOT NULL DEFAULT FALSE
+      ADD COLUMN IF NOT EXISTS family_force_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS family_not_yet_count INT NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS family_next_request_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS family_requests_closed BOOLEAN NOT NULL DEFAULT FALSE
   `);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS family_flow_settings (
