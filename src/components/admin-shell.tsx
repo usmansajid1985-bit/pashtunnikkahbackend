@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  MessageCircleHeart,
   LayoutDashboard,
   Users,
   IdCard,
@@ -40,6 +41,7 @@ const nav = [
   { href: "/notifications", label: "Push log", icon: Bell },
   { href: "/wali", label: "Wali", icon: UserCog },
   { href: "/reports", label: "Reports", icon: Flag },
+  { href: "/feedback", label: "Feedback", icon: MessageCircleHeart },
   { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/qa-checklist", label: "QA Checklist", icon: ClipboardCheck },
