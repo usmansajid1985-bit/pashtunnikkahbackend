@@ -8,9 +8,6 @@ import { loadFamilySettings, type FamilySettings } from "@/lib/family-flow";
 export const dynamic = "force-dynamic";
 
 const FIELDS: { name: string; label: string; hint?: string }[] = [
-  { name: "monthly_credits", label: "Monthly Introductions" },
-  { name: "rollover_cap", label: "Rollover cap", hint: "max unused Introductions carried into next cycle" },
-  { name: "max_balance", label: "Maximum balance", hint: "hard cap regardless of rollover" },
   { name: "pending_request_limit", label: "Pending request limit", hint: "max active outgoing Introductions" },
   { name: "request_expiry_days", label: "Request expiry (days)" },
 ];
@@ -45,8 +42,9 @@ export default async function SettingsPage() {
       <div>
         <h2 className="font-heading text-3xl font-medium tracking-tight">Settings</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Membership plan limits — changes take effect immediately for new requests and the next
-          renewal cycle.
+          Membership plan limits — changes take effect immediately for new requests. Match Token
+          allowances, rollover and the top-up pack are under{" "}
+          <a href="/billing" className="text-primary hover:underline">Billing &amp; Tokens</a>.
         </p>
       </div>
 

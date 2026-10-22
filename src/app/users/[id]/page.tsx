@@ -1,21 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { fmtDate, moneyWithCurrency } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { addUserNote, updateUserAccount, warnUser, toggleUserBlock } from "@/app/profiles/actions";
 import { BillingUsage } from "./billing-usage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +34,6 @@ export default async function UserDetailPage({
     where: { id: userId },
     include: {
       profiles: { include: { profile_guardians: true } },
-      payments: { orderBy: { created_at: "desc" }, take: 20 },
       subscriptions: { orderBy: { created_at: "desc" }, take: 10 },
       admin_notes_admin_notes_user_idTousers: {
         orderBy: { created_at: "desc" },

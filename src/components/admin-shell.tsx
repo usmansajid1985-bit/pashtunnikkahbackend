@@ -22,6 +22,7 @@ import {
   ListChecks,
   ClipboardCheck,
   Settings,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const nav = [
   { href: "/photos", label: "Photos", icon: ImageIcon },
   { href: "/homepage", label: "Homepage", icon: Images },
   { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/billing", label: "Billing & Tokens", icon: Coins },
   { href: "/requests", label: "Requests", icon: MessageSquareHeart },
   { href: "/chats", label: "Chats", icon: MessagesSquare },
   { href: "/notifications", label: "Push log", icon: Bell },

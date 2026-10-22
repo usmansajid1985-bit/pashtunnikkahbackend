@@ -24,9 +24,6 @@ export async function updatePlanSettings(formData: FormData) {
   await prisma.plan_settings.update({
     where: { plan },
     data: {
-      monthly_credits: num("monthly_credits"),
-      rollover_cap: num("rollover_cap"),
-      max_balance: num("max_balance"),
       pending_request_limit: num("pending_request_limit"),
       request_expiry_days: num("request_expiry_days"),
       saved_profile_limit: savedRaw === "" ? null : Math.max(0, Math.floor(Number(savedRaw))),

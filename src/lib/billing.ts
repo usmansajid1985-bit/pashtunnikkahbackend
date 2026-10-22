@@ -294,7 +294,8 @@ export async function loadBillingReport(from: Date, to: Date) {
       { granted: bigint; spent: bigint; expired: bigint; refunded: bigint; admin_granted: bigint; admin_removed: bigint }[]
     >`
       SELECT
-        (SELECT COALESCE(SUM(amount), 0) FROM token_lots WHERE granted_at BETWEEN ${from} AND ${to} AND source <> 'refund') AS granted,
+        (SELECT COALESCE(SUM(amount), 0) FROM token_lots WHERE granted_at BETWEEN ${from} AND ${to} AND source <> 'refund'
+           AND COALESCE(idempotency_key, '') NOT LIKE 'migration%') AS granted,
         (SELECT COUNT(*) FROM token_spends WHERE created_at BETWEEN ${from} AND ${to}) AS spent,
         (SELECT COALESCE(-SUM(amount), 0) FROM credit_ledger WHERE reason IN ('token_expired', 'gold_ended', 'gold_upgrade_reconciled') AND created_at BETWEEN ${from} AND ${to}) AS expired,
         (SELECT COUNT(*) FROM credit_ledger WHERE reason IN ('request_withdrawn_refund', 'request_expired_refund', 'request_blocked_refund') AND created_at BETWEEN ${from} AND ${to}) AS refunded,

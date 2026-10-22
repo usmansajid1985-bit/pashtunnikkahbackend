@@ -31,6 +31,8 @@ export const BILLING_SCHEMA_SQL = [
     updated_by BIGINT
   )`,
   `INSERT INTO token_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+  // When lot-based tokens went live: payments before this were credited the old way.
+  `ALTER TABLE token_settings ADD COLUMN IF NOT EXISTS engine_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
   `CREATE TABLE IF NOT EXISTS token_lots (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,

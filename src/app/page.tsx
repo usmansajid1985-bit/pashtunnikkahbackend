@@ -18,11 +18,15 @@ import {
 } from "@/components/charts";
 import { getDashboardAnalytics } from "@/lib/analytics";
 import { moneyPence } from "@/lib/format";
+import { loadBillingReport } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const a = await getDashboardAnalytics();
+  const [a, billing] = await Promise.all([
+    getDashboardAnalytics(),
+    loadBillingReport(new Date(Date.now() - 30 * 86400000), new Date()).catch(() => null),
+  ]);
 
   const stats = [
     { label: "Users", value: a.users, href: "/users", icon: Users, hint: "accounts" },
@@ -72,6 +76,38 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {billing ? (
+        <Link href="/billing" className="block group">
+          <Card className="transition group-hover:ring-primary/25 group-hover:shadow-sm">
+            <CardHeader className="flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle>Billing · last 30 days</CardTitle>
+                <CardDescription>Gold, revenue, top-ups, cancellations, failed payments and refunds</CardDescription>
+              </div>
+              {billing.openAlerts > 0 ? (
+                <Badge variant="destructive">{billing.openAlerts} alert{billing.openAlerts === 1 ? "" : "s"}</Badge>
+              ) : null}
+            </CardHeader>
+            <CardContent className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                ["Gold members", billing.goldMembers.toLocaleString(), `+${billing.newGold} new`],
+                ["Revenue (net)", moneyPence(billing.revenueNet), `${moneyPence(billing.revenueGross)} gross`],
+                ["Top-up sales", String(billing.topups.n), moneyPence(billing.topups.pence)],
+                ["Cancellations", String(billing.cancellations), `${billing.goldEnded} ended`],
+                ["Failed payments", String(billing.failedPayments), `${billing.pastDue} in grace now`],
+                ["Refunds", String(billing.refunds.n), moneyPence(billing.refunds.pence)],
+              ].map(([label, value, hint]) => (
+                <div key={label} className="rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+                  <p className="mt-0.5 text-xl font-semibold tabular-nums">{value}</p>
+                  <p className="text-xs text-muted-foreground">{hint}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </Link>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
