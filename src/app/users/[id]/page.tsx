@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { fmtDate, moneyWithCurrency } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
-import { adjustCredits, addUserNote, updateUserAccount, warnUser, toggleUserBlock } from "@/app/profiles/actions";
+import { addUserNote, updateUserAccount, warnUser, toggleUserBlock } from "@/app/profiles/actions";
+import { BillingUsage } from "./billing-usage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +30,13 @@ function Info({ title, value }: { title: string; value?: string | null }) {
 
 export default async function UserDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ ok?: string; error?: string }>;
 }) {
   const { id } = await params;
+  const flash = await searchParams;
   const userId = BigInt(id);
 
   const user = await prisma.users.findUnique({
@@ -152,23 +156,6 @@ export default async function UserDetailPage({
             <Button type="submit">Save account</Button>
           </form>
 
-          <form action={adjustCredits} className="flex flex-wrap gap-3 items-end">
-            <input type="hidden" name="id" value={user.id.toString()} />
-            <label className="text-sm">
-              <span className="block text-xs text-muted-foreground mb-1">Introductions remaining</span>
-              <Input
-                name="requests_remaining"
-                type="number"
-                min={0}
-                defaultValue={user.requests_remaining}
-                className="w-28"
-              />
-            </label>
-            <Button type="submit" variant="secondary">
-              Update credits
-            </Button>
-          </form>
-
           <form action={warnUser}>
             <input type="hidden" name="user_id" value={user.id.toString()} />
             <Button type="submit" variant="outline" size="sm">
@@ -178,10 +165,11 @@ export default async function UserDetailPage({
         </CardContent>
       </Card>
 
+      <BillingUsage userId={user.id} ok={flash.ok} error={flash.error} />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Info title="Plan" value={user.plan || "free"} />
         <Info title="Subscription" value={user.subscription_status} />
-        <Info title="Requests left" value={String(user.requests_remaining)} />
         <Info title="Email verified" value={user.email_verified ? "Yes" : "No"} />
         <Info title="SMS verified" value={user.sms_verified ? "Yes" : "No"} />
         <Info title="Cultural verified" value={user.cultural_verified ? "Yes" : "No"} />
@@ -309,40 +297,6 @@ export default async function UserDetailPage({
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden p-0">
-        <div className="px-4 py-3 border-b font-medium">Payments</div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Pack</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {user.payments.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
-                  No payments
-                </TableCell>
-              </TableRow>
-            )}
-            {user.payments.map((pay) => (
-              <TableRow key={pay.id.toString()}>
-                <TableCell>{pay.type}</TableCell>
-                <TableCell>{pay.plan_or_pack}</TableCell>
-                <TableCell>{moneyWithCurrency(pay.amount_pence, pay.currency)}</TableCell>
-                <TableCell>
-                  <StatusBadge value={pay.status} />
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{fmtDate(pay.created_at)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
     </div>
   );
 }
